@@ -2,6 +2,10 @@
 const $showsList = $("#showsList");
 const $episodesArea = $("#episodesArea");
 const $searchForm = $("#searchForm");
+const showsAPI = "http://api.tvmaze.com/search/shows";
+const episodesAPI = 'http://api.tvmaze.com/';
+const noImage = "https://tinyurl.com/tv-missing";
+
 /** Given a search term, search for tv shows that match that query.
  *
  *  Returns (promise) array of show objects: [show, show, ...].
@@ -11,18 +15,19 @@ const $searchForm = $("#searchForm");
 async function getShowsByTerm( /* term */) {
   // ADD: Remove placeholder & make request to TVMaze search shows API.
   let userInput = $("#searchForm-term").val(); // gets the term that user wants to search
-  let searchesByTerm = await $.get(`http://api.tvmaze.com/search/shows?q=${userInput}`); // get all of the shows that match user's search
-  let shows = [];
-  for (let eachShow of searchesByTerm) { // create object for each show containing id, name, summary and image
-    // console.log(each);
+  let searchesByTerm = await axios.get(showsAPI, {params: {q:userInput}}); // get all of the shows that match user's search // use axios params object
+  
+  let shows = searchesByTerm.data.map((eachShow) => { // create object for each show containing id, name, summary and image // refactor with ma
     let show = {
       id: eachShow.show.id, 
       name: eachShow.show.name, 
       summary: eachShow.show.summary, 
-      image: eachShow.show.image};
+      };
+      show.image = (eachShow.show.image !== null) ? eachShow.show.image.original : noImage;// could be a ternary operator
+      return show;
       // console.log(obj);
-    shows.push(show); // add object to array to return
-  }
+     // add object to array to return
+  });
   // console.log(searchesByTerm);
   // let firstShow = searchesByTerm[0].show;
   // console.log(firstShow.id);
@@ -53,8 +58,8 @@ function populateShows(shows) {
         `<div data-show-id="${show.id}" class="Show col-md-12 col-lg-6 mb-4">
          <div class="media">
            <img 
-              src="http://static.tvmaze.com/uploads/images/medium_portrait/160/401704.jpg" 
-              alt="Bletchly Circle San Francisco" 
+              src="${show.image}" 
+              alt="${show.name}" 
               class="w-25 mr-3">
            <div class="media-body">
              <h5 class="text-primary">${show.name}</h5>
@@ -77,6 +82,7 @@ async function searchForShowAndDisplay() {
   $episodesArea.hide();
   populateShows(shows);
 }
+
 $searchForm.on("submit", async function (evt) {
   evt.preventDefault();
   await searchForShowAndDisplay();
@@ -84,6 +90,44 @@ $searchForm.on("submit", async function (evt) {
 /** Given a show ID, get from API and return (promise) array of episodes:
  *      { id, name, season, number }
  */
-// async function getEpisodesOfShow(id) { }
-/** Write a clear docstring for this function... */
-// function populateEpisodes(episodes) { }
+async function getEpisodesOfShow(id) {
+  let episodesResponse = await axios.get(`${episodesAPI}shows/${id}/episodes`); // get all of the shows that match user's search
+  // return episodesData.data.map((episodeData) => { // create object for each show containing id, name, summary and image
+  //   // console.log(episode);
+  //   let episode = {
+  //     id: episodeData.id, 
+  //     name: episodeData.name, 
+  //     season: episodeData.season,
+  //     number: episodeData.number,
+  //   }
+  //   return episode;
+  // });
+  return episodesResponse.data.map(({id, name, season, number}) => ( // create object for each show containing id, name, summary and image
+    // console.log(episode);
+    {
+      id, 
+      name,
+      season,
+      number
+    }
+    ));
+}
+
+/** Given list of episodes, create markup for each and add to DOM */
+function populateEpisodes(episodes) {
+  $('#episodesList').empty();
+  for (let episode of episodes) {
+    let $episode = $(`<li> ${episode.name} (season ${episode.season}, number ${episode.number})</li>`);
+    $('#episodesList').append($episode);
+  }
+  $episodesArea.show(); 
+}
+
+/** gets list of episodes for the selected show and updates the DOM */
+async function buttonHandler (e) {
+  let id = $(e.target).closest('.Show').data('show-id');
+  let listOfEpisodes= await getEpisodesOfShow(id);
+  populateEpisodes(listOfEpisodes);
+}
+
+$showsList.on('click', '.Show-getEpisodes', buttonHandler)
