@@ -124,10 +124,10 @@ function populateEpisodes(episodes) {
 }
 
 /** gets list of episodes for the selected show and updates the DOM */
-async function buttonHandler (e) {
+async function getAndShowEpisodes (e) {
   let id = $(e.target).closest('.Show').data('show-id');
   let listOfEpisodes= await getEpisodesOfShow(id);
   populateEpisodes(listOfEpisodes);
 }
 
-$showsList.on('click', '.Show-getEpisodes', buttonHandler)
+$showsList.on('click', '.Show-getEpisodes', getAndShowEpisodes)
